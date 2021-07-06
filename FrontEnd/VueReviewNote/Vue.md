@@ -1589,3 +1589,471 @@ function (slotProps) {
 </todo-list>
 ```
 
+
+
+## API 归纳
+
+### 全局 API
+
+#### Vue.extend( options )
+
+- **参数**：
+
+  - `{Object} options`
+
+- **用法**：
+
+  使用基础 Vue 构造器，创建一个“子类”。参数是一个包含组件选项的对象。
+
+  因为Vue提供的构造器为new Vue()，使用Vue.extend可以自定义一个继承与Vue的构造器。
+
+  `data` 选项是特例，需要注意 - 在 `Vue.extend()` 中它必须是函数
+
+  ```
+  <div id="mount-point"></div>
+  ```
+
+  ```
+  // 创建构造器
+  var Profile = Vue.extend({
+    template: '<p>{{firstName}} {{lastName}} aka {{alias}}</p>',
+    data: function () {
+      return {
+        firstName: 'Walter',
+        lastName: 'White',
+        alias: 'Heisenberg'
+      }
+    }
+  })
+  // 创建 Profile 实例，并挂载到一个元素上。
+  new Profile().$mount('#mount-point')
+  ```
+
+  结果如下：
+
+  ```
+  <p>Walter White aka Heisenberg</p>
+  ```
+
+#### Vue.set( target, propertyName/index, value )
+
+- **参数**：
+
+  - `{Object | Array} target`
+  - `{string | number} propertyName/index`
+  - `{any} value`
+
+- **返回值**：设置的值。
+
+- **用法**：
+
+  向响应式对象中添加一个 property，并确保这个新 property 同样是响应式的，且触发视图更新。它必须用于向响应式对象上添加新 property，因为 Vue 无法探测普通的新增 property (比如 `this.myObject.newProperty = 'hi'`)
+
+  >  **注意对象不能是 Vue 实例，或者 Vue 实例的根数据对象。**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="div">  
+    <p>{{person}}</p>
+    <p>{{age}}</p>
+  </div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+<script>
+  var vm = new Vue({
+    el:"#div",
+    data: {
+      person: {
+        name: "ling",
+        job: "engineer"
+      }
+    },
+  })
+  Vue.set(vm.person, "age", 26)
+  // Vue.set(vm, "age", 26) 这样是不可以的 
+</script>
+</html>
+```
+
+#### Vue.directive( id, [definition\] )
+
+- **参数**：
+
+  - `{string} id`
+  - `{Function | Object} [definition]`
+
+- **用法**：
+
+  注册或获取全局指令。
+
+  ```js
+  // 注册
+  Vue.directive('my-directive', {
+    bind: function () {},
+    inserted: function () {},
+    update: function () {},
+    componentUpdated: function () {},
+    unbind: function () {}
+  })
+  
+  // 注册 (指令函数)
+  Vue.directive('my-directive', function () {
+    // 这里将会被 `bind` 和 `update` 调用
+  })
+  
+  // getter，返回已注册的指令
+  var myDirective = Vue.directive('my-directive')
+  ```
+
+#### Vue.filter( id, [definition\] )
+
+- **参数**：
+
+  - `{string} id`
+  - `{Function} [definition]`
+
+- **用法**：
+
+  注册或获取全局过滤器。
+
+  ```
+  // 注册
+  Vue.filter('my-filter', function (value) {
+    // 返回处理后的值
+  })
+  
+  // getter，返回已注册的过滤器
+  var myFilter = Vue.filter('my-filter')
+  ```
+
+#### Vue.component( id, [definition\] )
+
+- **参数**：
+
+  - `{string} id`
+  - `{Function | Object} [definition]`
+
+- **用法**：
+
+  注册或获取全局组件。注册还会自动使用给定的 `id` 设置组件的名称
+
+  ```
+  // 注册组件，传入一个扩展过的构造器
+  Vue.component('my-component', Vue.extend({ /* ... */ }))
+  
+  // 注册组件，传入一个选项对象 (自动调用 Vue.extend)
+  Vue.component('my-component', { /* ... */ })
+  
+  // 获取注册的组件 (始终返回构造器)
+  var MyComponent = Vue.component('my-component')
+  ```
+
+#### Vue.mixin( mixin )
+
+- **参数**：
+
+  - `{Object} mixin`
+
+- **用法**：
+
+  全局注册一个混入，影响注册之后所有创建的每个 Vue 实例。插件作者可以使用混入，向组件注入自定义的行为。**不推荐在应用代码中使用**。
+
+  ```
+  // 为自定义的选项 'myOption' 注入一个处理器。
+  Vue.mixin({
+    created: function () {
+      var myOption = this.$options.myOption
+      if (myOption) {
+        console.log(myOption)
+      }
+    }
+  })
+  
+  new Vue({
+    myOption: 'hello!'
+  })
+  // => "hello!"
+  ```
+
+#### Vue.observable( object )
+
+> 2.6.0 新增
+
+- **参数**：
+
+  - `{Object} object`
+
+- **用法**：
+
+  让一个对象可响应。Vue 内部会用它来处理 `data` 函数返回的对象。
+
+  返回的对象可以直接用于[渲染函数](https://cn.vuejs.org/v2/guide/render-function.html)和[计算属性](https://cn.vuejs.org/v2/guide/computed.html)内，并且会在发生变更时触发相应的更新。也可以作为最小化的跨组件状态存储器，用于简单的场景：
+
+  ```
+  const state = Vue.observable({ count: 0 })
+  
+  const Demo = {
+    render(h) {
+      return h('button', {
+        on: { click: () => { state.count++ }}
+      }, `count is: ${state.count}`)
+    }
+  }
+  ```
+
+  在 Vue 2.x 中，被传入的对象会直接被 `Vue.observable` 变更，所以如[这里展示的](https://cn.vuejs.org/v2/guide/instance.html#数据与方法)，它和被返回的对象是同一个对象。在 Vue 3.x 中，则会返回一个可响应的代理，而对源对象直接进行变更仍然是不可响应的。因此，为了向前兼容，我们推荐始终操作使用 `Vue.observable` 返回的对象，而不是传入源对象。
+
+
+
+### 特殊 attribute
+
+#### key
+
+- **预期**：`number | string | boolean (2.4.2 新增) | symbol (2.5.12 新增)`
+
+  `key` 的特殊 attribute 主要用在 Vue 的虚拟 DOM 算法，在新旧 nodes 对比时辨识 VNodes。如果不使用 key，Vue 会使用一种最大限度减少动态元素并且尽可能的尝试就地修改/复用相同类型元素的算法。而使用 key 时，它会基于 key 的变化重新排列元素顺序，并且会移除 key 不存在的元素。
+
+  有相同父元素的子元素必须有**独特的 key**。重复的 key 会造成渲染错误。
+
+  最常见的用例是结合 `v-for`：
+
+  ```
+  <ul>
+    <li v-for="item in items" :key="item.id">...</li>
+  </ul>
+  ```
+
+  它也可以用于强制替换元素/组件而不是重复使用它。当你遇到如下场景时它可能会很有用：
+
+  - 完整地触发组件的生命周期钩子
+  - 触发过渡
+
+  例如：
+
+  ```
+  <transition>
+    <span :key="text">{{ text }}</span>
+  </transition>
+  ```
+
+  当 `text` 发生改变时，`<span>` 总是会被替换而不是被修改，因此会触发过渡。
+
+#### ref
+
+- **预期**：`string`
+
+  `ref` 被用来给元素或子组件注册引用信息。引用信息将会注册在父组件的 `$refs` 对象上。如果在普通的 DOM 元素上使用，引用指向的就是 DOM 元素；如果用在子组件上，引用就指向组件实例：
+
+  ```
+  <!-- `vm.$refs.p` will be the DOM node -->
+  <p ref="p">hello</p>
+  
+  <!-- `vm.$refs.child` will be the child component instance -->
+  <child-component ref="child"></child-component>
+  ```
+
+  当 `v-for` 用于元素或组件的时候，引用信息将是包含 DOM 节点或组件实例的数组。
+
+  关于 ref 注册时间的重要说明：因为 ref 本身是作为渲染结果被创建的，在初始渲染的时候你不能访问它们 - 它们还不存在！`$refs` 也不是响应式的，因此你不应该试图用它在模板中做数据绑定。
+
+- **参考**：[子组件 ref](https://cn.vuejs.org/v2/guide/components-edge-cases.html#访问子组件实例或子元素)
+
+#### is
+
+- **预期**：`string | Object (组件的选项对象)`
+
+  用于[动态组件](https://cn.vuejs.org/v2/guide/components.html#动态组件)且基于 [DOM 内模板的限制](https://cn.vuejs.org/v2/guide/components.html#解析-DOM-模板时的注意事项)来工作。
+
+  示例：
+
+  ```
+  <!-- 当 `currentView` 改变时，组件也跟着改变 -->
+  <component v-bind:is="currentView"></component>
+  
+  <!-- 这样做是有必要的，因为 `<my-row>` 放在一个 -->
+  <!-- `<table>` 内可能无效且被放置到外面 -->
+  <table>
+    <tr is="my-row"></tr>
+  </table>
+  ```
+
+  更多的使用细节，请移步至下面的链接。
+
+- **See also**：
+
+  - [动态组件](https://cn.vuejs.org/v2/guide/components.html#动态组件)
+  - [DOM 模板解析说明](https://cn.vuejs.org/v2/guide/components.html#解析-DOM-模板时的注意事项)
+
+
+
+### 内置的组件
+
+#### component
+
+- **Props**：
+
+  - `is` - string | ComponentDefinition | ComponentConstructor
+  - `inline-template` - boolean
+
+- **用法**：
+
+  渲染一个“元组件”为动态组件。依 `is` 的值，来决定哪个组件被渲染。
+
+  ```
+  <!-- 动态组件由 vm 实例的 `componentId` property 控制 -->
+  <component :is="componentId"></component>
+  
+  <!-- 也能够渲染注册过的组件或 prop 传入的组件 -->
+  <component :is="$options.components.child"></component>
+  ```
+
+例子：
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dynamic Components Example</title>
+    <script src="https://unpkg.com/vue"></script>
+    <style>
+      .tab-button {
+        padding: 6px 10px;
+        border-top-left-radius: 3px;
+        border-top-right-radius: 3px;
+        border: 1px solid #ccc;
+        cursor: pointer;
+        background: #f0f0f0;
+        margin-bottom: -1px;
+        margin-right: -1px;
+      }
+      .tab-button:hover {
+        background: #e0e0e0;
+      }
+      .tab-button.active {
+        background: #e0e0e0;
+      }
+      .tab {
+        border: 1px solid #ccc;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="dynamic-component-demo" class="demo">
+      <button
+        v-for="tab in tabs"
+        v-bind:key="tab"
+        v-bind:class="['tab-button', { active: currentTab === tab }]"
+        v-on:click="currentTab = tab"
+      >
+        {{ tab }}
+      </button>
+
+      <component v-bind:is="currentTabComponent" class="tab"></component>
+    </div>
+
+    <script>
+      Vue.component("tab-home", {
+        template: "<div>Home component</div>"
+      });
+      Vue.component("tab-posts", {
+        template: "<div>Posts component</div>"
+      });
+      Vue.component("tab-archive", {
+        template: "<div>Archive component</div>"
+      });
+
+      new Vue({
+        el: "#dynamic-component-demo",
+        data: {
+          currentTab: "Home",
+          tabs: ["Home", "Posts", "Archive"]
+        },
+        computed: {
+          currentTabComponent: function() {
+            return "tab-" + this.currentTab.toLowerCase();
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+```
+
+#### transition
+
+- **Props**：
+
+  - `name` - string，用于自动生成 CSS 过渡类名。例如：`name: 'fade'` 将自动拓展为 `.fade-enter`，`.fade-enter-active` 等。默认类名为 `"v"`
+  - `appear` - boolean，是否在初始渲染时使用过渡。默认为 `false`。
+  - `css` - boolean，是否使用 CSS 过渡类。默认为 `true`。如果设置为 `false`，将只通过组件事件触发注册的 JavaScript 钩子。
+  - `type` - string，指定过渡事件类型，侦听过渡何时结束。有效值为 `"transition"` 和 `"animation"`。默认 Vue.js 将自动检测出持续时间长的为过渡事件类型。
+  - `mode` - string，控制离开/进入过渡的时间序列。有效的模式有 `"out-in"` 和 `"in-out"`；默认同时进行。
+  - `duration` - number | { `enter`: number, `leave`: number } 指定过渡的持续时间。默认情况下，Vue 会等待过渡所在根元素的第一个 `transitionend` 或 `animationend` 事件。
+  - `enter-class` - string
+  - `leave-class` - string
+  - `appear-class` - string
+  - `enter-to-class` - string
+  - `leave-to-class` - string
+  - `appear-to-class` - string
+  - `enter-active-class` - string
+  - `leave-active-class` - string
+  - `appear-active-class` - string
+
+- **事件**：
+
+  - `before-enter`
+  - `before-leave`
+  - `before-appear`
+  - `enter`
+  - `leave`
+  - `appear`
+  - `after-enter`
+  - `after-leave`
+  - `after-appear`
+  - `enter-cancelled`
+  - `leave-cancelled` (`v-show` only)
+  - `appear-cancelled`
+
+- **用法**：
+
+  `<transition>` 元素作为**单个**元素/组件的过渡效果。`<transition>` 只会把过渡效果应用到其包裹的内容上，而不会额外渲染 DOM 元素，也不会出现在可被检查的组件层级中。
+
+  ```
+  <!-- 简单元素 -->
+  <transition>
+    <div v-if="ok">toggled content</div>
+  </transition>
+  
+  <!-- 动态组件 -->
+  <transition name="fade" mode="out-in" appear>
+    <component :is="view"></component>
+  </transition>
+  
+  <!-- 事件钩子 -->
+  <div id="transition-demo">
+    <transition @after-enter="transitionComplete">
+      <div v-show="ok">toggled content</div>
+    </transition>
+  </div>
+  ```
+
+  ```
+  new Vue({
+    ...
+    methods: {
+      transitionComplete: function (el) {
+        // 传入 'el' 这个 DOM 元素作为参数。
+      }
+    }
+    ...
+  }).$mount('#transition-demo')
+  ```
