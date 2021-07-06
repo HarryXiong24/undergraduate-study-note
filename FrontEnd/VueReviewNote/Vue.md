@@ -1591,6 +1591,149 @@ function (slotProps) {
 
 
 
+## 依赖注入 provide / inject
+
+> 2.2.0 新增
+
+- **类型**：
+
+  - **provide**：`Object | () => Object`
+  - **inject**：`Array<string> | { [key: string]: string | Symbol | Object }`
+
+- **详细**：
+
+  这对选项需要一起使用，以允许一个祖先组件向其所有子孙后代注入一个依赖，不论组件层次有多深，并在其上下游关系成立的时间里始终生效。如果你熟悉 React，这与 React 的上下文特性很相似。
+
+  `provide` 选项应该是一个对象或返回一个对象的函数。该对象包含可注入其子孙的 property。在该对象中你可以使用 ES2015 Symbols 作为 key，但是只在原生支持 `Symbol` 和 `Reflect.ownKeys` 的环境下可工作。
+
+  `inject` 选项应该是：
+
+  - 一个字符串数组，或
+  - 一个对象，对象的 key 是本地的绑定名，value 是：
+    - 在可用的注入内容中搜索用的 key (字符串或 Symbol)，或
+    - 一个对象，该对象的：
+      - `from` property 是在可用的注入内容中搜索用的 key (字符串或 Symbol)
+      - `default` property 是降级情况下使用的 value
+
+  > 提示：`provide` 和 `inject` 绑定并不是可响应的。这是刻意为之的。然而，如果你传入了一个可监听的对象，那么其对象的 property 还是可响应的。
+
+- **示例**：
+
+  ```
+  // 父级组件提供 'foo'
+  var Provider = {
+    provide: {
+      foo: 'bar'
+    },
+    // ...
+  }
+  
+  // 子组件注入 'foo'
+  var Child = {
+    inject: ['foo'],
+    created () {
+      console.log(this.foo) // => "bar"
+    }
+    // ...
+  }
+  ```
+
+  利用 ES2015 Symbols、函数 `provide` 和对象 `inject`：
+
+  ```
+  const s = Symbol()
+  
+  const Provider = {
+    provide () {
+      return {
+        [s]: 'foo'
+      }
+    }
+  }
+  
+  const Child = {
+    inject: { s },
+    // ...
+  }
+  ```
+
+  > 接下来 2 个例子只工作在 Vue 2.2.1 或更高版本。低于这个版本时，注入的值会在 `props` 和 `data` 初始化之后得到。
+
+  使用一个注入的值作为一个 property 的默认值：
+
+  ```
+  const Child = {
+    inject: ['foo'],
+    props: {
+      bar: {
+        default () {
+          return this.foo
+        }
+      }
+    }
+  }
+  ```
+
+  使用一个注入的值作为数据入口：
+
+  ```
+  const Child = {
+    inject: ['foo'],
+    data () {
+      return {
+        bar: this.foo
+      }
+    }
+  }
+  ```
+
+  > 在 2.5.0+ 的注入可以通过设置默认值使其变成可选项：
+
+  ```
+  const Child = {
+    inject: {
+      foo: { default: 'foo' }
+    }
+  }
+  ```
+
+  如果它需要从一个不同名字的 property 注入，则使用 `from` 来表示其源 property：
+
+  ```
+  const Child = {
+    inject: {
+      foo: {
+        from: 'bar',
+        default: 'foo'
+      }
+    }
+  }
+  ```
+
+  与 prop 的默认值类似，你需要对非原始值使用一个工厂方法：
+
+  ```
+  const Child = {
+    inject: {
+      foo: {
+        from: 'bar',
+        default: () => [1, 2, 3]
+      }
+    }
+  }
+  ```
+
+实际上，你可以把依赖注入看作一部分“大范围有效的 prop”，除了：
+
+- 祖先组件不需要知道哪些后代组件使用它提供的 property
+- 后代组件不需要知道被注入的 property 来自哪里
+
+>  然而，依赖注入还是有负面影响的。它将你应用程序中的组件与它们当前的组织方式耦合起来，使重构变得更加困难。同时所提供的 property 是非响应式的。这是出于设计的考虑，因为使用它们来创建一个中心化规模化的数据跟[使用 `$root`](https://cn.vuejs.org/v2/guide/components-edge-cases.html#访问根实例)做这件事都是不够好的。如果你想要共享的这个 property 是你的应用特有的，而不是通用化的，或者如果你想在祖先组件中更新所提供的数据，那么这意味着你可能需要换用一个像 [Vuex](https://github.com/vuejs/vuex) 这样真正的状态管理方案了。
+
+**依赖注入可传入基本数据类型、数组、对象、甚至函数。**
+
+
+
 ## API 归纳
 
 ### 全局 API
