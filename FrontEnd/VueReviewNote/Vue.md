@@ -2335,6 +2335,93 @@ router.push({ name: 'user', params: { userId: 123 } })
 
 
 
+### 命名视图
+
+有时候想同时 (同级) 展示多个视图，而不是嵌套展示，例如创建一个布局，有 `sidebar` (侧导航) 和 `main` (主内容) 两个视图，这个时候命名视图就派上用场了。你可以在界面中拥有多个单独命名的视图，而不是只有一个单独的出口。如果 `router-view` 没有设置名字，那么默认为 `default`。
+
+```html
+<router-view class="view one"></router-view>
+<router-view class="view two" name="a"></router-view>
+<router-view class="view three" name="b"></router-view>
+```
+
+一个视图使用一个组件渲染，因此对于同个路由，多个视图就需要多个组件。确保正确使用 `components` 配置 (带上 s)：
+
+```js
+const router = new VueRouter({
+  routes: [
+    {
+      path: '/',
+      components: {
+        default: Foo,
+        a: Bar,
+        b: Baz
+      }
+    }
+  ]
+})
+```
+
+
+
+### 嵌套命名视图
+
+我们也有可能使用命名视图创建嵌套视图的复杂布局。这时你也需要命名用到的嵌套 `router-view` 组件。我们以一个设置面板为例：
+
+```text
+/settings/emails                                       /settings/profile
++-----------------------------------+                  +------------------------------+
+| UserSettings                      |                  | UserSettings                 |
+| +-----+-------------------------+ |                  | +-----+--------------------+ |
+| | Nav | UserEmailsSubscriptions | |  +------------>  | | Nav | UserProfile        | |
+| |     +-------------------------+ |                  | |     +--------------------+ |
+| |     |                         | |                  | |     | UserProfilePreview | |
+| +-----+-------------------------+ |                  | +-----+--------------------+ |
++-----------------------------------+                  +------------------------------+
+```
+
+- `Nav` 只是一个常规组件。
+- `UserSettings` 是一个视图组件。
+- `UserEmailsSubscriptions`、`UserProfile`、`UserProfilePreview` 是嵌套的视图组件。
+
+**注意**：*我们先忘记 HTML/CSS 具体的布局的样子，只专注在用到的组件上。*
+
+`UserSettings` 组件的 `<template>` 部分应该是类似下面的这段代码：
+
+```html
+<!-- UserSettings.vue -->
+<div>
+  <h1>User Settings</h1>
+  <NavBar/>
+  <router-view/>
+  <router-view name="helper"/>
+</div>
+```
+
+*嵌套的视图组件在此已经被忽略了，但是你可以在[这里 (opens new window)](https://jsfiddle.net/posva/22wgksa3/)找到完整的源代码。*
+
+然后你可以用这个路由配置完成该布局：
+
+```js
+{
+  path: '/settings',
+  // 你也可以在顶级路由就配置命名视图
+  component: UserSettings,
+  children: [{
+    path: 'emails',
+    component: UserEmailsSubscriptions
+  }, {
+    path: 'profile',
+    components: {
+      default: UserProfile,
+      helper: UserProfilePreview
+    }
+  }]
+}
+```
+
+
+
 ### 别名
 
 “重定向”的意思是，当用户访问 `/a`时，URL 将会被替换成 `/b`，然后匹配路由为 `/b`，那么“别名”又是什么呢？
@@ -2712,4 +2799,80 @@ beforeRouteLeave (to, from, next) {
 12. 调用 `beforeRouteEnter` 守卫中传给 `next` 的回调函数，创建好的组件实例会作为回调函数的参数传入。
 
 
+
+### 路由元信息
+
+用于给路由携带信息。
+
+定义路由的时候可以配置 `meta` 字段：
+
+```js
+const router = new VueRouter({
+  routes: [
+    {
+      path: '/foo',
+      component: Foo,
+      children: [
+        {
+          path: 'bar',
+          component: Bar,
+          // a meta field
+          meta: { requiresAuth: true }
+        }
+      ]
+    }
+  ]
+})
+```
+
+那么如何访问这个 `meta` 字段呢？
+
+首先，我们称呼 `routes` 配置中的每个路由对象为 **路由记录**。路由记录可以是嵌套的，因此，当一个路由匹配成功后，他可能匹配多个路由记录
+
+例如，根据上面的路由配置，`/foo/bar` 这个 URL 将会匹配父路由记录以及子路由记录。
+
+一个路由匹配到的所有路由记录会暴露为 `$route` 对象 (还有在导航守卫中的路由对象) 的 `$route.matched` 数组。因此，我们需要遍历 `$route.matched` 来检查路由记录中的 `meta` 字段。
+
+下面例子展示在全局导航守卫中检查元字段：
+
+```js
+router.beforeEach((to, from, next) => {
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    // this route requires auth, check if logged in
+    // if not, redirect to login page.
+    if (!auth.loggedIn()) {
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
+    } else {
+      next()
+    }
+  } else {
+    next() // 确保一定要调用 next()
+  }
+})
+```
+
+用法：
+
+```js
+const routes = [
+  {
+    path: "/",
+    name: "Home",
+    component: Home,
+    props: { name: "world" },
+    meta: {
+      ID: "2018121015",
+      name: "Harry",
+      age: 21,
+    },
+  },
+];
+
+mounted() {
+  console.log(this.$route.meta);
+}, 
+```
 
