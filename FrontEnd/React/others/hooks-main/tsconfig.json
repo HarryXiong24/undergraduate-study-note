@@ -1,0 +1,8 @@
+{
+  "extends": "@gilbarbara/tsconfig",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*"]
+}

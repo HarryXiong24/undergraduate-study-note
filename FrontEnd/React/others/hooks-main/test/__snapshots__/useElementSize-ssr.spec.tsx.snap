@@ -1,0 +1,12 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`useElementSize-ssr should work without a DOM 1`] = `
+<pre>
+  {
+  &quot;height&quot;: 0,
+  &quot;innerHeight&quot;: 0,
+  &quot;innerWidth&quot;: 0,
+  &quot;width&quot;: 0
+}
+</pre>
+`;
